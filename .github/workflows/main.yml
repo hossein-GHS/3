@@ -1,0 +1,48 @@
+name: Fetch Dynamic Page HTML
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to fetch'
+        required: true
+      filename:
+        description: 'Output file (e.g. page.html)'
+        default: 'page.html'
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-dynamic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Puppeteer
+        run: npm install puppeteer
+
+      - name: Fetch and save rendered HTML
+        run: node -e "
+          const puppeteer = require('puppeteer');
+          (async () => {
+            const browser = await puppeteer.launch();
+            const page = await browser.newPage();
+            await page.goto('${{ github.event.inputs.url }}', { waitUntil: 'networkidle0' });
+            const html = await page.content();
+            require('fs').writeFileSync('${{ github.event.inputs.filename }}', html);
+            await browser.close();
+          })();
+        "
+
+      - name: Commit and push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          file_pattern: '${{ github.event.inputs.filename }}'
+          commit_message: 'Add rendered HTML from ${{ github.event.inputs.url }}'
