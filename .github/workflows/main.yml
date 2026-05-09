@@ -1,0 +1,36 @@
+name: Fetch URL HTML
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to fetch'
+        required: true
+        type: string
+      filename:
+        description: 'Output filename (e.g. page.html)'
+        required: false
+        type: string
+        default: 'page.html'
+
+# Grant write permission to commit changes
+permissions:
+  contents: write
+
+jobs:
+  fetch-and-save:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch HTML from URL
+        run: |
+          echo "Fetching ${{ github.event.inputs.url }}"
+          curl -L -s -o "${{ github.event.inputs.filename }}" "${{ github.event.inputs.url }}"
+
+      - name: Commit and push HTML file
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          file_pattern: '${{ github.event.inputs.filename }}'
+          commit_message: 'Add fetched HTML from ${{ github.event.inputs.url }}'
